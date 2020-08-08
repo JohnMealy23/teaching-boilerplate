@@ -5,15 +5,20 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "parcel src/index.html"
+    "start": "parcel src/index.html",
+    "start-server": "ts-node  -O '{\"module\": \"commonjs\"}' ./server/index.ts"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@types/node": "^14.0.27",
+    "axios": "^0.19.2",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
     "openweather-apis": "^4.3.1"
   },
   "devDependencies": {
+    "ts-node": "^8.10.2",
     "typescript": "^3.8.3"
   }
 }
