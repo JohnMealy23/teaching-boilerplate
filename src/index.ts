@@ -23,33 +23,67 @@ const addToDom = (val) => {
 addToDom('<h2>City</h2>');
 addToDom(userCity);
 
-// get the Temperature
-weather.getTemperature(function (err, temp) {
-    addToDom('<h2>Temperature</h2>');
-    addToDom(temp);
-});
+const errs = [];
 
-// get the Atm Pressure
-weather.getPressure(function (err, pres) {
-    addToDom('<h2>Pressure</h2>');
-    addToDom(pres);
-});
+try {
+    // get the Temperature
+    weather.getTemperature(function (err, temp) {
+        if (err) {
+            errs.push(err)
+        } else {
+            addToDom('<h2>Temperature</h2>');
+            addToDom(temp);
+        }
+    });
 
-// get the Humidity
-weather.getHumidity(function (err, hum) {
-    addToDom('<h2>Humidity</h2>');
-    addToDom(hum);
-});
+    // get the Atm Pressure
+    weather.getPressure(function (err, pres) {
+        if (err) {
+            errs.push(err)
+        } else {
+            addToDom('<h2>Pressure</h2>');
+            addToDom(pres);
+        }
+    });
 
-// get the Description of the weather condition
-weather.getDescription(function (err, desc) {
-    addToDom('<h2>Description</h2>');
-    addToDom(desc);
-});
+    // get the Humidity
+    weather.getHumidity(function (err, hum) {
+        if (err) {
+            errs.push(err)
+        } else {
+            addToDom('<h2>Humidity</h2>');
+            addToDom(hum);
+        }
+    });
 
-// get all the JSON file returned from server (rich of info)
-weather.getAllWeather(function (err, JSONObj) {
-    addToDom(''j);
-    addToDom('AllWeather'j);
-    addToDom(JSONObj);
-});
+    // get the Description of the weather condition
+    weather.getDescription(function (err, desc) {
+        if (err) {
+            errs.push(err)
+        } else {
+            addToDom('<h2>Description</h2>');
+            addToDom(desc);
+        }
+    });
+
+    // get all the JSON file returned from server (rich of info)
+    weather.getAllWeather(function (err, data) {
+        if (err) {
+            errs.push(err)
+        } else {
+            addToDom('<h2>All Weather Data</h2>');
+            addToDom(`<pre>${JSON.stringify(data, null, 4)}</pre>`);
+        }
+    });
+
+} catch (e) {
+    errs.push(e.message)
+}
+
+// Display errors
+if (errs.length) {
+    errs.forEach((err) => {
+        addToDom('<h2>Error</h2>');
+        addToDom(`<pre>${err}</pre>`);
+    })
+}
