@@ -20,7 +20,7 @@ We'll use Parcel as our bundler.  It's an open-source NPM pacakge that will buil
 
 To install Parcel, run this command in you command line:
 ```base
-npm install -g parcel-bundler --save-dev
+sudo npm install -g parcel-bundler --save-dev
 ```
 
 Note the `-g` in the above command.  Usually when we use the `npm install {package-name} --save` command, the package we're installing is added to the project's package.json file.  However, when using the `-g` flag, this indicates to NPM that you'd like the package installed "globally".  This means global to your entire system - not just in the project we're in.
