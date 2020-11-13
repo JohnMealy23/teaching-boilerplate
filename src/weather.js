@@ -1,7 +1,16 @@
 import * as weather from 'openweather-apis';
+let sandBox
+export const init = () => {
+    // element to store the items to be cleared
+    sandBox = document.createElement('div')
+    document.body.appendChild(sandBox)
+}
 
-export const printWeather = (userCity) => {
-    weather.setLang('en');
+export const printWeather = (userCity,languageAbr,tempUnits) => {
+    // clear out the previous weather output
+    sandBox.innerHTML = ''
+
+    weather.setLang(languageAbr);
     // English - en, Russian - ru, Italian - it, Spanish - es (or sp),
     // Ukrainian - uk (or ua), German - de, Portuguese - pt,Romanian - ro,
     // Polish - pl, Finnish - fi, Dutch - nl, French - fr, Bulgarian - bg,
@@ -9,14 +18,18 @@ export const printWeather = (userCity) => {
     // Turkish - tr, Croatian - hr, Catalan - ca
 
     // set city by name
+
     weather.setCity(userCity);
 
     weather.setAPPID('81e37ce4badff27cd32572988247eed9')
 
+    // 'metric'  'internal'  'imperial'
+ 	weather.setUnits(tempUnits);
+
     const addToDom = (val) => {
         const element = document.createElement('div')
         element.innerHTML = val
-        document.body.appendChild(element)
+        sandBox.appendChild(element)
     }
 
     addToDom('<h2>City</h2>');
