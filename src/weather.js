@@ -24,7 +24,7 @@ export const printWeather = (userCity,languageAbr,tempUnits) => {
     weather.setAPPID('81e37ce4badff27cd32572988247eed9')
 
     // 'metric'  'internal'  'imperial'
- 	weather.setUnits(tempUnits);
+ 	weather.setUnits(tempUnits); //.setUnits is a method.
 
     const addToDom = (val) => {
         const element = document.createElement('div')
