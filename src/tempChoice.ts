@@ -10,8 +10,9 @@ export const radioTemp = (tempChoice, tempUnit) => {
     const createButtonLabel = document.createElement('label')
     createButtonLabel.innerText = tempChoice
     document.body.appendChild(createButtonLabel)
-    return createButton.value
+     
 }
+
 
 /* <div>
   <input type="radio" id="louie" name="drone" value="louie">
