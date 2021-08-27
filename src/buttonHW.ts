@@ -1,5 +1,9 @@
-import { state } from './steven/state'
-import { create } from 'domain';
+import { getState, config, Goodie } from './steven/state'
+import { getRandomInt } from './getRandomInt';
+import { makeSpriteDiv } from './makeSpriteDiv';
+import { createWormHole, Wormhole } from './createWormHole';
+import { checkIntersect } from './checkIntersect';
+
 
 // Create four buttons: 'up', 'right', 'down', 'left'
 // Create a div that is 1000 pixels by 1000 pixels, with a blue background
@@ -13,21 +17,19 @@ import { create } from 'domain';
 // clicks any button, 'you''s position inside of its parent div is adjusted to reflect the values of state.location.
 // clicks, 'you' never leaves the bounds of the parent div.
 
-const config = {
-    boardHeight: 300,
-    boardWidth: 300,
-    boardColor: 'blue',
-    userColor: 'orange',
-    tailColor: 'red',
-    moveDistance: 10,
-    userWidth: 10,
-    userHeight: 10,
-    goodieColor: 'purple',
-    resetButtonColor: 'red'
-}
-// Does tailDivMachine need an argument?
-const tailDivMachine = () => {
 
+
+
+const board = document.createElement('div');
+board.style.width = config.boardWidth + 'px';
+board.style.height = config.boardHeight + 'px';
+board.style.background = config.boardColor;
+board.style.position = 'relative';
+document.body.appendChild(board)
+
+const state = getState(config, board)
+
+const segmentFactory = () => {
     const tailSegment = document.createElement('div');
     tailSegment.style.width = config.userWidth + 'px';
     tailSegment.style.height = config.userHeight + 'px';
@@ -36,50 +38,132 @@ const tailDivMachine = () => {
     tailSegment.style.left = state.location.x + 'px';
     tailSegment.style.top = state.location.y + 'px';
     tailSegment.id = 'tail';
+    tailSegment.style.borderRadius = 50 + 'px'
     board.appendChild(tailSegment)
     return tailSegment
 }
+type UpdateStateType = 'move' | 'reset' | 'youDied'
+type Direction = 'up' | 'down' | 'left' | 'right'
+const updateState = (type: UpdateStateType, payload?: Direction) => {
+    if (type === 'move') {
+        movePiece(payload)
 
-const updateState = (payload) => {
-    if (payload === 'up' && state.location.y > 0) {
-        state.location.y = state.location.y - config.moveDistance
-
-    } else if (payload === 'down' && state.location.y < config.boardHeight - config.userHeight) {
-        state.location.y = state.location.y + config.moveDistance
-    } else if (payload === 'left' && state.location.x > 0) {
-        state.location.x = state.location.x - config.moveDistance
-    } else if (payload === 'right' && state.location.x < config.boardWidth - config.userWidth) {
-        state.location.x = state.location.x + config.moveDistance
-    } else if (payload === 'reset') {
-        state.score = 0
-        state.moving = true
-
-        state.goodies.forEach(goodie => {
-            goodie.remove()
-        })
-        state.goodies = []
-
-        state.goodies.push(createGoodie())
-        state.goodies.push(createGoodie())
-        state.goodies.push(createGoodie())
+    } else if (type === 'youDied') {
+        state.moving = false
+        gamePiece.style.left = 0 + 'px';
+        gamePiece.style.top = 0 + 'px'
 
         state.location.x = 0
         state.location.y = 0
+
+
+
+    } else if (type === 'reset') {
+        state.lives = config.defaultLives
+        state.score = 0
+
+        state.goodies.forEach(goodie => {
+            goodie.elem.remove()
+        })
+        state.goodies = []
+        state.moving = false
+        gamePiece.style.left = 0 + 'px';
+        gamePiece.style.top = 0 + 'px'
+
+        state.location.x = 0
+        state.location.y = 0
+
+        state.goodies.push(createGoodie())
+        state.goodies.push(createGoodie())
+        state.goodies.push(createGoodie())
         state.segments.forEach(segment => {
             segment.remove()
         })
         state.segments = []
-
     }
 
-    console.log(state)
+
+
+
+
+    let goodieWasHit = false
+    const increaseLife = (checkCache) => {
+        if (checkCache >= state.pointPlus) {
+            state.lives = state.lives + 1
+            updateLives(state.lives)
+            state.pointCache = 0
+        }
+    }
+
+
+    if (checkIntersect(state.location, state.wormHoles.one)) {
+        // we know wormHoleOne has been hit
+        state.location.x = state.wormHoles.two.x
+        state.location.y = state.wormHoles.two.y
+    } else if (checkIntersect(state.location, state.wormHoles.two)) {
+        // we know wormHoleTwo has been hit
+
+        state.location.x = state.wormHoles.one.x
+        state.location.y = state.wormHoles.one.y
+    }
+
+    state.goodies = state.goodies.reduce((acc, goodie) => {//goodieHitFun()
+        //const goodieHitFun = () => {}
+        if (checkIntersect(goodie, state.location)) {
+            goodieWasHit = true
+            // alert('YAY')
+            state.score = state.score + goodie.points
+            updateScore(state.score)
+            state.pointCache = state.pointCache + goodie.points
+            increaseLife(state.pointCache)
+
+            board.removeChild(goodie.elem)
+
+            const segment = segmentFactory()
+            state.segments.push(segment)
+
+            const newGoodie = createGoodie()
+            // state.goodies.push(newGoodie)
+            acc.push(newGoodie)
+
+
+        } else {
+            acc.push(goodie)
+        }
+        return acc
+    }, [] as Goodie[]);
+    if (goodieWasHit === false) {
+        tailHitCheck()
+    }
+
+
+}
+const movePiece = (direction) => {
+    let lastX = gamePiece.style.left
+    let lastY = gamePiece.style.top
+    let shouldMoveSegments = true
+    if (direction === 'up') {
+        state.location.y = state.location.y - config.moveDistance
+    } else if (direction === 'down') {
+        state.location.y = state.location.y + config.moveDistance
+    } else if (direction === 'left') {
+        state.location.x = state.location.x - config.moveDistance
+    } else if (direction === 'right') {
+        state.location.x = state.location.x + config.moveDistance
+    } else {
+        shouldMoveSegments = false
+    }
+
+    if (shouldMoveSegments) {
+        updateSegments(lastX, lastY)
+    }
     gamePiece.style.left = state.location.x + 'px'
     gamePiece.style.top = state.location.y + 'px'
 
 
+}
 
-    let lastX = state.location.x + 'px'
-    let lastY = state.location.y + 'px'
+const updateSegments = (lastX, lastY) => {
     state.segments.forEach(segment => {
         // captures segment start location
         const xCache = segment.style.left
@@ -90,62 +174,27 @@ const updateState = (payload) => {
         // stores this tail pieces initial position so the next tail piece can inherit that
         lastX = xCache
         lastY = yCache
-
     })
-
-    state.goodies = state.goodies.reduce((acc, goodie) => {
-        if (goodie.x === state.location.x && goodie.y === state.location.y) {
-
-            // alert('YAY')
-            state.score = state.score + goodie.points
-            updateScore(state.score)
-            // add goodie size/original gamepiece size to gamepiece when goodie is hit - DONE
-            // make additional length a different color - DONE
-            // make additional length follow behind gamepiece
-            // create a "div" factory that fires whenever a goodie is hit? - DONE
-            // new divs location is based on updateStates direction?
-
-
-            board.removeChild(goodie.elem)
-
-
-            const segment = tailDivMachine()
-            state.segments.push(segment)
-
-
-            // this creates a new goodie on the board that a) doesnt give points and b) doesnt get eaten...
-            const newGoodie = createGoodie()
-            // state.goodies.push(newGoodie)
-            acc.push(newGoodie)
-
-
-        } else {
-            acc.push(goodie)
-        }
-        return acc
-    }, []);
-
 }
-
 let interval: any
-const move = (direction) => {
-    if (!state.moving) {
-        state.moving = true
-        interval = setInterval(() => {
-            updateState(direction)
-        }, 100)
+const moveStart = (direction) => {
+    state.moving = true
+    clearInterval(interval)
+    interval = setInterval(() => {
+        updateState('move', direction)
+        boarderCheck()
 
-    } else {
-        clearInterval(interval)
-        state.moving = false
-    }
+    }, 100)
+
 }
+
+
 const buttonFactory = (direction) => {
     const element = document.createElement('button')
     document.body.appendChild(element)
     element.innerText = direction
     element.addEventListener('click', () => {
-        move(direction)
+        moveStart(direction)
     })
 
 }
@@ -153,13 +202,13 @@ document.body.addEventListener('keydown', (event) => {
     // Was the key an arrow key?
     // if yes: which arrow key?
     if (event.keyCode === 38) {
-        move('up')
+        moveStart('up')
     } else if (event.keyCode === 40) {
-        move('down')
+        moveStart('down')
     } else if (event.keyCode === 37) {
-        move('left')
+        moveStart('left')
     } else if (event.keyCode === 39) {
-        move('right')
+        moveStart('right')
     }
 }
 )
@@ -178,64 +227,55 @@ document.body.appendChild(scoreDiv)
 
 updateScore(state.score)
 
+const livesDiv = document.createElement('div')
+const updateLives = (lives) => {
+    livesDiv.innerText = 'Lives: ' + lives.toString()
+}
+document.body.appendChild(livesDiv)
+updateLives(state.lives)
 
-const board = document.createElement('div');
-board.style.width = config.boardWidth + 'px';
-board.style.height = config.boardHeight + 'px';
-board.style.background = config.boardColor;
-board.style.position = 'relative';
-document.body.appendChild(board)
+
+
+state.segments.push(segmentFactory())
 
 //creates the game piece
+// const createGamePiece = () => {
 const gamePiece = document.createElement('div');
 gamePiece.style.width = config.userWidth + 'px';
 gamePiece.style.height = config.userHeight + 'px';
 gamePiece.style.background = config.userColor;
 gamePiece.style.position = 'absolute';
-gamePiece.style.left = '0px';
-gamePiece.style.top = '0px';
+gamePiece.style.left = state.location.x + 'px';
+gamePiece.style.top = state.location.y + 'px';
 gamePiece.id = 'you';
 board.appendChild(gamePiece)
+// return gamePiece
+//}
+// createGamePiece()
 
-function getRandomInt(min, max) {
-    const num = Math.random() * (max - min + 1) + min // 44.123
-    const rounded = Math.floor(num); //44
-    const toTheTens = Math.floor(rounded / 10) * 10
-    return toTheTens
 
-}
 
-const fruits = {
+const divImage = {
     apple: 'https://stickershop.line-scdn.net/stickershop/v1/product/1745817/LINEStorePC/main.png;compress=true',
     lychee: 'https://www.teisseire.com/media/1740/litchipng.png',
-    kiwi: 'https://mightieskiwi.com/content/themes/baileylauerman/assets/media/images/mighties/lg-kiwi-man-spoon.png'
+    kiwi: 'https://mightieskiwi.com/content/themes/baileylauerman/assets/media/images/mighties/lg-kiwi-man-spoon.png',
+    wormHole: 'https://mystickermania.com/cdn/stickers/rick-and-morty/sticker_2060-512x512.png'
 }
 
-const makeGoodieDiv = (x, y) => {
-    const goodieElem = document.createElement('div')
-    board.appendChild(goodieElem)
-    goodieElem.style.width = config.userWidth + 'px';
-    goodieElem.style.height = config.userHeight + 'px';
-    goodieElem.style.background = config.goodieColor;
-    goodieElem.style.position = 'absolute';
-    goodieElem.style.left = x + 'px';
-    goodieElem.style.top = y + 'px';
-    if (config.userWidth + x > config.boardWidth) {
-        throw new Error('Goodie will appear off the board')
-    }
-    return goodieElem
-}
-const createGoodie = () => {
-    const points = getRandomInt(1, 100)
+
+const createGoodie = (): Goodie => {
     let image
-    if (points < 33) {
-        image = fruits.apple
-    } else if (points < 66) {
-        image = fruits.lychee
-
+    let points
+    const fruitChoose = getRandomInt(1, 100)
+    if (fruitChoose < 33) {
+        image = divImage.apple
+        points = 25
+    } else if (fruitChoose < 66) {
+        image = divImage.lychee
+        points = 50
     } else {
-        image = fruits.kiwi
-
+        image = divImage.kiwi
+        points = 100
     }
     const x = getRandomInt(0, config.boardWidth - config.userWidth)
     const y = getRandomInt(0, config.boardHeight - config.userHeight)
@@ -244,7 +284,7 @@ const createGoodie = () => {
         y,
         points,
         image,
-        elem: makeGoodieDiv(x, y)
+        elem: makeSpriteDiv(x, y, image, config, board)
     }
 
     return singleGoodie
@@ -257,20 +297,83 @@ state.goodies.push(createGoodie())
 // new goodie gets created whenever old goodie gets 'eaten'
 
 
+const resetGame = () => {
+    updateState('reset')
+    updateLives(state.lives)
+    updateScore(state.score)
+}
 
 
-
+const resetAfterDeath = () => {
+    clearInterval(interval)
+    updateState('youDied')
+    lifeRemoval()
+}
 const reset = document.createElement('button')
 document.body.appendChild(reset)
 reset.innerText = 'Reset!'
 reset.style.backgroundColor = config.resetButtonColor
-reset.addEventListener('click', () => {
-    updateState('reset')
-    updateScore(state.score)
-
-    move('reset')
-    gamePiece.style.width = config.userWidth + 'px';
-    gamePiece.style.height = config.userHeight + 'px';
-})
+reset.addEventListener('click', resetGame)
 
 
+
+const lifeRemoval = () => {
+    console.log(state.lives)
+    state.lives = state.lives - 1
+    console.log(state.lives)
+    updateLives(state.lives)
+    if (state.lives === 0) {
+        alert("GAME OVER")
+        resetGame()
+    }
+}
+
+
+// 6/3/21
+// HW:  eat tail kills you
+//HW: Make this work - if gamepiece steps out of bounds, hit reset
+const boarderCheck = () => {
+    if (state.location.x === config.boardWidth) {
+        resetAfterDeath()
+    } else if (state.location.x === 0 - config.userWidth) {
+        resetAfterDeath()
+    } else if (state.location.y === 0 - config.userWidth) {
+        resetAfterDeath()
+    } else if (state.location.y === config.boardHeight) {
+        resetAfterDeath()
+    }
+}
+
+
+const tailHitCheck = () => {
+    state.segments.forEach(segment => {
+        if (
+            segment.style.left === state.location.x + 'px' &&
+            segment.style.top === state.location.y + 'px'
+        ) {
+            //debugger
+            resetAfterDeath()
+            lifeRemoval()
+        }
+    })
+
+}
+
+
+// hw:  rounded segments.  
+// Random fruit function.  
+// - a type of goodie has a consistent type of fruit and a consistent score - DONE
+// Can not go backwards to kill yourself
+// introduce concept of lives
+
+/**
+ * User starts with three lives.
+ * Every time the user dies, take away one life.
+ * When they die after last life, display game over and reset score to zero.
+ * Every 1000 points user gets new life.
+ */
+
+/** -Cannot go backwards to die
+ * - Make worm holes
+ *
+ */
